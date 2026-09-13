@@ -45,7 +45,13 @@ export function takePendingName(code: string): string {
 }
 
 export function gameSocketBase(): string {
-  return (process.env.NEXT_PUBLIC_GAME_WS_URL || "ws://127.0.0.1:8787").replace(/\/$/, "");
+  const configured = process.env.NEXT_PUBLIC_GAME_WS_URL?.replace(/\/$/, "");
+  if (configured) return configured;
+  if (typeof window !== "undefined") {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.host}/game-worker`;
+  }
+  return "ws://127.0.0.1:8787";
 }
 
 export function gameHttpBase(): string {

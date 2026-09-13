@@ -52,7 +52,7 @@ Para expor temporariamente o Deck Studio ao callback do Spotify, mantenha o Next
 npm run tunnel
 ```
 
-Copie o endereço HTTPS mostrado pelo Cloudflare para `SPOTIFY_REDIRECT_URI`, acrescentando `/api/spotify/callback`, e cadastre exatamente a mesma URI no Spotify Dashboard. Para usar salas pelo tunnel único, use esse mesmo hostname em `NEXT_PUBLIC_GAME_WS_URL`, acrescentando `/game-worker`, e inclua a origem HTTPS em `worker/.dev.vars`. O Next encaminha esse caminho ao Worker local. Quick Tunnels mudam de endereço quando reiniciados e são indicados apenas para desenvolvimento.
+Copie o endereço HTTPS mostrado pelo Cloudflare para `SPOTIFY_REDIRECT_URI`, acrescentando `/api/spotify/callback`, e cadastre exatamente a mesma URI no Spotify Dashboard. Deixe `NEXT_PUBLIC_GAME_WS_URL` vazio: o navegador usa `/game-worker` na mesma origem e o Next encaminha esse caminho ao Worker local. Os exemplos já permitem `*.trycloudflare.com` no Next e no Worker durante o desenvolvimento. Assim, quando o Quick Tunnel mudar, basta atualizar `SPOTIFY_REDIRECT_URI` e reiniciar o Next; não é necessário alterar a origem do Worker. Quick Tunnels mudam de endereço quando reiniciados e são indicados apenas para desenvolvimento.
 
 Para testar em celulares na mesma rede, exponha os dois processos em um endereço HTTPS/WSS acessível e ajuste:
 

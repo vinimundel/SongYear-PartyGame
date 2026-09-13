@@ -1,4 +1,5 @@
 import { SongYearRoom, type Env } from "./songyear-room";
+import { originMatchesAllowed } from "./origins";
 import { validCustomDeck } from "../../shared/deck";
 import {
   MAX_CUSTOM_DECK_SIZE,
@@ -12,12 +13,16 @@ import {
 
 export { SongYearRoom };
 
-function allowedOrigins(env: Env): Set<string> {
-  return new Set(env.ALLOWED_ORIGINS.split(",").map((value) => value.trim()).filter(Boolean));
+function configuredOrigins(env: Env): string[] {
+  return env.ALLOWED_ORIGINS.split(",").map((value) => value.trim()).filter(Boolean);
+}
+
+function originAllowed(origin: string, env: Env): boolean {
+  return originMatchesAllowed(origin, configuredOrigins(env));
 }
 
 function cors(origin: string | null, env: Env): HeadersInit {
-  const allowed = origin && allowedOrigins(env).has(origin) ? origin : "";
+  const allowed = origin && originAllowed(origin, env) ? origin : "";
   return {
     ...(allowed ? { "Access-Control-Allow-Origin": allowed } : {}),
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
@@ -49,7 +54,7 @@ const worker = {
       return new Response(null, { status: 204, headers: cors(origin, env) });
     }
 
-    if (origin && !allowedOrigins(env).has(origin)) {
+    if (origin && !originAllowed(origin, env)) {
       return json({ error: "origin_not_allowed" }, 403, origin, env);
     }
 
