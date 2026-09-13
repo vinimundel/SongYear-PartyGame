@@ -54,7 +54,14 @@ export function HostAudio({
       setStatus("Buscando prévia…");
       let response: Response;
       try {
-        response = await fetch(`/api/cards/${encodeURIComponent(command.cardId)}/preview`, { cache: "no-store" });
+        response = command.card
+          ? await fetch("/api/preview", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(command.card),
+              cache: "no-store",
+            })
+          : await fetch(`/api/cards/${encodeURIComponent(command.cardId)}/preview`, { cache: "no-store" });
       } catch {
         send({ type: "host:audio-failed", status: "unavailable", audioRun: command.audioRun });
         setStatus("Serviço de áudio indisponível");

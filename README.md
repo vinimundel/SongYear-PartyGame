@@ -9,7 +9,7 @@ O repositório contém um MVP funcional com:
 - fichas, troca de música, contestação por ordem de chegada e compra de carta extra;
 - reprodução de prévias no celular do host, priorizando iTunes e usando Deezer como fallback;
 - tela pública para TV com QR code;
-- Deck Studio local para importar uma playlist do Spotify ou CSV, consultar o Genius, revisar anos e exportar um `deck.json` estático;
+- Deck Studio local para acumular playlists do Spotify ou CSV, consultar o Genius, revisar anos e exportar um `deck.json` estático;
 - baralho inicial de desenvolvimento com 40 faixas e imagens provisórias feitas em CSS.
 
 ## Arquitetura
@@ -25,7 +25,7 @@ celulares + TV ── WebSocket ──> Worker + Durable Object
                             └── Deezer API (fallback)
 ```
 
-O Spotify e o Genius são usados apenas no Deck Studio do host. Ele pode acumular quantas playlists quiser, com remoção automática de faixas duplicadas, antes de exportar o baralho. Convidados não montam nem alteram o deck. Uma partida normal lê o arquivo estático [`data/deck.json`](data/deck.json) e não depende dessas contas.
+O host pode conectar o Spotify na tela inicial e acumular quantas playlists quiser no baralho da sala, com remoção automática de faixas duplicadas e limite de 500 músicas válidas. Convidados não montam nem alteram o deck. Sem playlists próprias, a partida usa [`data/deck.json`](data/deck.json). O Deck Studio continua disponível para preparar e revisar esse baralho-base offline com ajuda do Genius. O Spotify fornece somente os metadados nessa preparação; a reprodução continua usando as prévias configuradas pelo projeto.
 
 ## Rodar localmente
 
@@ -52,7 +52,7 @@ Para expor temporariamente o Deck Studio ao callback do Spotify, mantenha o Next
 npm run tunnel
 ```
 
-Copie o endereço HTTPS mostrado pelo Cloudflare para `SPOTIFY_REDIRECT_URI`, acrescentando `/api/dev/spotify/callback`, e cadastre exatamente a mesma URI no Spotify Dashboard. Quick Tunnels mudam de endereço quando reiniciados e são indicados apenas para desenvolvimento.
+Copie o endereço HTTPS mostrado pelo Cloudflare para `SPOTIFY_REDIRECT_URI`, acrescentando `/api/spotify/callback`, e cadastre exatamente a mesma URI no Spotify Dashboard. Para usar salas pelo tunnel único, use esse mesmo hostname em `NEXT_PUBLIC_GAME_WS_URL`, acrescentando `/game-worker`, e inclua a origem HTTPS em `worker/.dev.vars`. O Next encaminha esse caminho ao Worker local. Quick Tunnels mudam de endereço quando reiniciados e são indicados apenas para desenvolvimento.
 
 Para testar em celulares na mesma rede, exponha os dois processos em um endereço HTTPS/WSS acessível e ajuste:
 
@@ -70,10 +70,10 @@ Abra `http://127.0.0.1:8000/dev/deck` em desenvolvimento.
 
 1. Crie um app no Spotify for Developers e adicione exatamente o redirect URI abaixo:
 
-   `http://127.0.0.1:8000/api/dev/spotify/callback`
+   `http://127.0.0.1:8000/api/spotify/callback`
 
 2. Preencha `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` e `SPOTIFY_REDIRECT_URI` em `.env.local`.
-3. Conecte sua conta no Deck Studio e adicione quantas playlists quiser que essa conta possa acessar. Cada importação é acumulada no baralho atual.
+3. Na tela inicial, o host conecta sua conta e adiciona quantas playlists quiser ao baralho da sala. No Deck Studio, o mesmo fluxo pode ser usado para preparar o baralho-base estático.
 
 ### Via CSV
 

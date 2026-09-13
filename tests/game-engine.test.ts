@@ -8,6 +8,7 @@ import {
   type StoredRoom,
 } from "@/shared/game-engine";
 import type { GameMode, SongCard } from "@/shared/protocol";
+import { validCustomDeck } from "@/shared/deck";
 
 const cards = new Map<string, SongCard>(
   Array.from({ length: 14 }, (_, index) => {
@@ -45,6 +46,27 @@ describe("ordem cronológica", () => {
     expect(isGapCorrect([1980, 1990, 1990, 2000], 1, 1990)).toBe(true);
     expect(isGapCorrect([1980, 1990, 1990, 2000], 3, 1990)).toBe(true);
     expect(isGapCorrect([1980, 1990, 2000], 1, 2001)).toBe(false);
+  });
+});
+
+describe("baralho do host", () => {
+  it("valida quantidade, IDs únicos e links HTTPS", () => {
+    const custom = [...cards.values()].slice(0, 3).map((card) => ({ ...card, links: { spotify: "https://open.spotify.com/track/test" } }));
+    expect(validCustomDeck(custom, 3, 10)).toBe(true);
+    expect(validCustomDeck([...custom, { ...custom[0] }], 3, 10)).toBe(false);
+    expect(validCustomDeck(custom.map((card, index) => index ? card : { ...card, links: { spotify: "javascript:alert(1)" } }), 3, 10)).toBe(false);
+    expect(validCustomDeck(custom.map((card, index) => index ? card : { ...card, id: "" }), 3, 10)).toBe(false);
+  });
+
+  it("inicia a partida usando somente as cartas escolhidas pelo host", () => {
+    const custom = [...cards.values()].slice(0, 5);
+    const room = createRoomState("HOST", "Host", "host-secret", "p1", "p1-secret", "original", 1_000, custom);
+    addParticipant(room, "Convidado", "p2", "p2-secret");
+    const customMap = new Map(custom.map((card) => [card.id, card]));
+    applyGameAction(room, { playerId: "p1", isHost: true }, { type: "host:start", actionId: "custom-start", firstPlayerId: "p1" }, customMap, 2_000, () => 0.999);
+    expect([...room.drawPile, ...room.participants.flatMap((player) => player.timeline), room.currentCardId]).toSatisfy(
+      (ids: Array<string | null>) => ids.every((id) => id === null || customMap.has(id))
+    );
   });
 });
 

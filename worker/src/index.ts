@@ -1,5 +1,13 @@
 import { SongYearRoom, type Env } from "./songyear-room";
-import { ROOM_CODE_ALPHABET, ROOM_CODE_LENGTH, type GameMode } from "../../shared/protocol";
+import { validCustomDeck } from "../../shared/deck";
+import {
+  MAX_CUSTOM_DECK_SIZE,
+  MIN_CUSTOM_DECK_SIZE,
+  ROOM_CODE_ALPHABET,
+  ROOM_CODE_LENGTH,
+  type GameMode,
+  type SongCard,
+} from "../../shared/protocol";
 
 export { SongYearRoom };
 
@@ -45,7 +53,7 @@ const worker = {
     }
 
     if (request.method === "POST" && url.pathname === "/rooms") {
-      let body: { hostName?: unknown; mode?: unknown };
+      let body: { hostName?: unknown; mode?: unknown; deck?: unknown };
       try {
         body = await request.json();
       } catch {
@@ -55,11 +63,18 @@ const worker = {
       if (!hostName || !validMode(body.mode)) {
         return json({ error: "hostName_and_mode_required" }, 400, origin, env);
       }
+      let deck: SongCard[] = [];
+      if (body.deck !== undefined) {
+        if (!validCustomDeck(body.deck, MIN_CUSTOM_DECK_SIZE, MAX_CUSTOM_DECK_SIZE)) {
+          return json({ error: "custom_deck_invalid", minimum: MIN_CUSTOM_DECK_SIZE, maximum: MAX_CUSTOM_DECK_SIZE }, 400, origin, env);
+        }
+        deck = body.deck;
+      }
 
       for (let attempt = 0; attempt < 12; attempt += 1) {
         const code = randomCode();
         const stub = env.SONGYEAR_ROOM.getByName(code);
-        const claimed = await stub.claim(code, hostName, body.mode);
+        const claimed = await stub.claim(code, hostName, body.mode, deck);
         if (claimed) return json({ code, ...claimed }, 201, origin, env);
       }
       return json({ error: "room_code_exhausted" }, 503, origin, env);

@@ -6,6 +6,7 @@ const TOKEN_URL = "https://accounts.spotify.com/api/token";
 const API_URL = "https://api.spotify.com/v1";
 export const SPOTIFY_SESSION_COOKIE = "songyear_spotify_session";
 export const SPOTIFY_STATE_COOKIE = "songyear_spotify_state";
+export const SPOTIFY_RETURN_COOKIE = "songyear_spotify_return";
 const COOKIE_AGE = 30 * 24 * 60 * 60;
 
 interface Config { clientId: string; clientSecret: string; redirectUri: string }
@@ -94,6 +95,10 @@ export function beginSpotifyAuth(response: NextResponse): void {
 
 export function newSpotifyState(): string { return randomBytes(24).toString("base64url"); }
 
+export function safeReturnTo(value: string | null): string {
+  return value && value.startsWith("/") && !value.startsWith("//") && value.length <= 500 ? value : "/";
+}
+
 export async function exchangeCode(code: string): Promise<SpotifySession> {
   const value = config();
   const result = await token(new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: value.redirectUri }));
@@ -109,11 +114,13 @@ export function setSession(response: NextResponse, session: SpotifySession): voi
     httpOnly: true, sameSite: "lax", secure: secureCookie(), path: "/", maxAge: COOKIE_AGE,
   });
   response.cookies.delete(SPOTIFY_STATE_COOKIE);
+  response.cookies.delete(SPOTIFY_RETURN_COOKIE);
 }
 
 export function clearSession(response: NextResponse): void {
   response.cookies.delete(SPOTIFY_SESSION_COOKIE);
   response.cookies.delete(SPOTIFY_STATE_COOKIE);
+  response.cookies.delete(SPOTIFY_RETURN_COOKIE);
 }
 
 export async function getSession(request: NextRequest, response?: NextResponse): Promise<SpotifySession | null> {

@@ -2,8 +2,9 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { HostDeckBuilder } from "@/components/host-deck-builder";
 import { gameHttpBase, saveIdentity, savePendingName } from "@/lib/room-storage";
-import type { ClientIdentity, GameMode } from "@/shared/protocol";
+import { MIN_CUSTOM_DECK_SIZE, type ClientIdentity, type GameMode, type SongCard } from "@/shared/protocol";
 
 export default function HomePage() {
   const router = useRouter();
@@ -14,6 +15,7 @@ export default function HomePage() {
   const [displayCode, setDisplayCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [hostDeck, setHostDeck] = useState<SongCard[]>([]);
 
   async function createRoom(event: FormEvent) {
     event.preventDefault();
@@ -23,10 +25,12 @@ export default function HomePage() {
       const response = await fetch(`${gameHttpBase()}/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hostName, mode }),
+        body: JSON.stringify({ hostName, mode, ...(hostDeck.length ? { deck: hostDeck } : {}) }),
       });
       const body = (await response.json()) as { code?: string; identity?: ClientIdentity; error?: string };
-      if (!response.ok || !body.code || !body.identity) throw new Error(body.error || "Não foi possível criar a sala.");
+      if (!response.ok || !body.code || !body.identity) {
+        throw new Error(body.error === "custom_deck_invalid" ? "O baralho personalizado precisa ter entre 20 e 500 músicas válidas." : body.error || "Não foi possível criar a sala.");
+      }
       saveIdentity(body.code, body.identity);
       router.push(`/room/${body.code}`);
     } catch (reason) {
@@ -79,7 +83,8 @@ export default function HomePage() {
               </label>
             ))}
           </fieldset>
-          <button className="primary" disabled={busy}>{busy ? "Criando…" : "Criar partida"}</button>
+          <HostDeckBuilder onChange={setHostDeck} />
+          <button className="primary" disabled={busy || (hostDeck.length > 0 && hostDeck.length < MIN_CUSTOM_DECK_SIZE)}>{busy ? "Criando…" : "Criar partida"}</button>
         </form>
 
         <div className="stack">

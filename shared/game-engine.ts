@@ -37,6 +37,8 @@ export interface StoredRoom {
   code: string;
   hostToken: string;
   mode: GameMode;
+  /** Baralho específico escolhido pelo host; vazio usa o baralho padrão. */
+  deck: SongCard[];
   phase: RoomSnapshot["phase"];
   participants: StoredParticipant[];
   turnIndex: number;
@@ -96,12 +98,14 @@ export function createRoomState(
   hostPlayerId: string,
   hostPlayerToken: string,
   mode: GameMode,
-  now: number
+  now: number,
+  deck: SongCard[] = []
 ): StoredRoom {
   return {
     code,
     hostToken,
     mode,
+    deck,
     phase: "lobby",
     participants: [{
       id: hostPlayerId,

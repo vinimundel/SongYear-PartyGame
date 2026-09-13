@@ -15,6 +15,7 @@ import {
   type ClientIdentity,
   type GameMode,
   type ServerMessage,
+  type SongCard,
 } from "../../shared/protocol";
 
 export interface Env {
@@ -40,7 +41,7 @@ export class SongYearRoom extends DurableObject<Env> {
     });
   }
 
-  async claim(code: string, hostName: string, mode: GameMode): Promise<{
+  async claim(code: string, hostName: string, mode: GameMode, deck: SongCard[] = []): Promise<{
     hostToken: string;
     identity: ClientIdentity;
     expiresAt: number;
@@ -49,7 +50,7 @@ export class SongYearRoom extends DurableObject<Env> {
     const hostToken = crypto.randomUUID();
     const playerId = crypto.randomUUID();
     const playerToken = crypto.randomUUID();
-    this.room = createRoomState(code, hostName, hostToken, playerId, playerToken, mode, Date.now());
+    this.room = createRoomState(code, hostName, hostToken, playerId, playerToken, mode, Date.now(), deck);
     await this.persistAndSchedule();
     return {
       hostToken,
@@ -89,7 +90,7 @@ export class SongYearRoom extends DurableObject<Env> {
       this.room,
       { playerId: attachment.playerId, isHost: attachment.isHost },
       message,
-      SONGS_BY_ID,
+      this.cards(),
       Date.now()
     );
     if (!result.ok) return this.fail(ws, "invalid_action", result.error ?? "Ação inválida.");
@@ -118,7 +119,7 @@ export class SongYearRoom extends DurableObject<Env> {
       this.room = null;
       return;
     }
-    const effects = resolveExpiredDeadline(this.room, SONGS_BY_ID, now);
+    const effects = resolveExpiredDeadline(this.room, this.cards(), now);
     if (effects.length) {
       await this.persistAndSchedule();
       this.deliverEffects(effects);
@@ -174,7 +175,7 @@ export class SongYearRoom extends DurableObject<Env> {
     const attachment = ws.deserializeAttachment() as SocketAttachment | null;
     this.send(ws, {
       type: "state",
-      snapshot: makeSnapshot(this.room, SONGS_BY_ID, this.connectedPlayerIds()),
+      snapshot: makeSnapshot(this.room, this.cards(), this.connectedPlayerIds()),
       you: {
         role: attachment?.role ?? "display",
         ...(attachment?.playerId ? { playerId: attachment.playerId } : {}),
@@ -195,7 +196,10 @@ export class SongYearRoom extends DurableObject<Env> {
       for (const socket of this.ctx.getWebSockets()) {
         const attachment = socket.deserializeAttachment() as SocketAttachment | null;
         if (attachment?.role !== "player" || !attachment.isHost) continue;
-        if (effect.type === "audio:play") this.send(socket, effect);
+        if (effect.type === "audio:play") {
+          const card = this.cards().get(effect.cardId);
+          this.send(socket, { ...effect, ...(card ? { card } : {}) });
+        }
         else this.send(socket, { type: "audio:stop" });
       }
     }
@@ -203,6 +207,11 @@ export class SongYearRoom extends DurableObject<Env> {
 
   private touch() {
     if (this.room) this.room.expiresAt = Date.now() + ROOM_IDLE_TIMEOUT_MS;
+  }
+
+  private cards(): ReadonlyMap<string, SongCard> {
+    if (!this.room?.deck?.length) return SONGS_BY_ID;
+    return new Map(this.room.deck.map((card) => [card.id, card]));
   }
 
   private async persistAndSchedule() {

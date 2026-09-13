@@ -114,7 +114,7 @@ export function DeckStudio() {
   const approved = useMemo(() => toDeck(tracks), [tracks]);
 
   useEffect(() => {
-    fetch("/api/dev/spotify/session", { cache: "no-store" }).then((response) => response.json()).then(setSpotify).catch(() => setSpotify({ connected: false }));
+    fetch("/api/spotify/session", { cache: "no-store" }).then((response) => response.json()).then(setSpotify).catch(() => setSpotify({ connected: false }));
   }, []);
 
   function update(key: string, patch: Partial<DraftTrack>) {
@@ -123,7 +123,7 @@ export function DeckStudio() {
 
   async function importPlaylist() {
     setBusy("spotify"); setMessage("");
-    const response = await fetch("/api/dev/spotify/playlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playlist }) });
+    const response = await fetch("/api/spotify/playlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playlist }) });
     const body = await response.json() as { name?: string; tracks?: Array<{ title: string; artists: string[]; year: number | null; durationMs?: number; spotifyUrl?: string }>; error?: string };
     if (!response.ok || !body.tracks) setMessage(body.error ?? "Falha ao importar playlist.");
     else {
@@ -188,7 +188,7 @@ export function DeckStudio() {
         <div className="panel">
           <p className="eyebrow">ÁREA DO HOST</p>
           <h2>Spotify</h2>
-          {spotify?.connected ? <p>Conectado como <strong>{spotify.displayName ?? "conta Spotify"}</strong>.</p> : <a className="primary link-button" href="/api/dev/spotify/login">Conectar Spotify</a>}
+          {spotify?.connected ? <p>Conectado como <strong>{spotify.displayName ?? "conta Spotify"}</strong>.</p> : <a className="primary link-button" href="/api/spotify/login?returnTo=/dev/deck">Conectar Spotify</a>}
           <label>Link ou ID da sua playlist<input value={playlist} onChange={(event) => setPlaylist(event.target.value)} placeholder="https://open.spotify.com/playlist/…" /></label>
           <button className="secondary" disabled={!spotify?.connected || !playlist || Boolean(busy)} onClick={importPlaylist}>{busy === "spotify" ? "Importando…" : "Importar playlist"}</button>
           {sources.length > 0 && <div className="source-list">{sources.map((source, index) => <span key={`${source.name}-${index}`}>{source.name} · {source.count}</span>)}</div>}

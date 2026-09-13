@@ -4,6 +4,8 @@ export const MAX_PLAYERS = 4;
 export const MIN_PLAYERS = 2;
 export const STARTING_TOKENS = 2;
 export const WINNING_CARD_COUNT = 10;
+export const MIN_CUSTOM_DECK_SIZE = 20;
+export const MAX_CUSTOM_DECK_SIZE = 500;
 export const CHALLENGE_WINDOW_MS = 10_000;
 export const ROOM_IDLE_TIMEOUT_MS = 3 * 60 * 60 * 1000;
 
@@ -116,7 +118,7 @@ export type ClientMessage =
 export type ServerMessage =
   | { type: "state"; snapshot: RoomSnapshot; you: { role: "display" | "player"; playerId?: string; isHost: boolean } }
   | { type: "identity"; identity: ClientIdentity }
-  | { type: "audio:play"; cardId: string; audioRun: number }
+  | { type: "audio:play"; cardId: string; card?: SongCard; audioRun: number }
   | { type: "audio:stop" }
   | { type: "error"; code: string; message: string }
   | { type: "pong" };
