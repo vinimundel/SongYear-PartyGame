@@ -2,6 +2,7 @@ import { SongYearRoom, type Env } from "./songyear-room";
 import { validCustomDeck } from "../../shared/deck";
 import {
   MAX_CUSTOM_DECK_SIZE,
+  MAX_SONGS_PER_ARTIST,
   MIN_CUSTOM_DECK_SIZE,
   ROOM_CODE_ALPHABET,
   ROOM_CODE_LENGTH,
@@ -53,7 +54,7 @@ const worker = {
     }
 
     if (request.method === "POST" && url.pathname === "/rooms") {
-      let body: { hostName?: unknown; mode?: unknown; deck?: unknown };
+      let body: { hostName?: unknown; mode?: unknown; deck?: unknown; variedArtists?: unknown };
       try {
         body = await request.json();
       } catch {
@@ -63,10 +64,19 @@ const worker = {
       if (!hostName || !validMode(body.mode)) {
         return json({ error: "hostName_and_mode_required" }, 400, origin, env);
       }
+      if (body.variedArtists !== undefined && typeof body.variedArtists !== "boolean") {
+        return json({ error: "variedArtists_must_be_boolean" }, 400, origin, env);
+      }
+      const variedArtists = body.variedArtists === true;
       let deck: SongCard[] = [];
       if (body.deck !== undefined) {
-        if (!validCustomDeck(body.deck, MIN_CUSTOM_DECK_SIZE, MAX_CUSTOM_DECK_SIZE)) {
-          return json({ error: "custom_deck_invalid", minimum: MIN_CUSTOM_DECK_SIZE, maximum: MAX_CUSTOM_DECK_SIZE }, 400, origin, env);
+        if (!validCustomDeck(body.deck, MIN_CUSTOM_DECK_SIZE, MAX_CUSTOM_DECK_SIZE, variedArtists ? MAX_SONGS_PER_ARTIST : undefined)) {
+          return json({
+            error: "custom_deck_invalid",
+            minimum: MIN_CUSTOM_DECK_SIZE,
+            maximum: MAX_CUSTOM_DECK_SIZE,
+            ...(variedArtists ? { maximumPerArtist: MAX_SONGS_PER_ARTIST } : {}),
+          }, 400, origin, env);
         }
         deck = body.deck;
       }

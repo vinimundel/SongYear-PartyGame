@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MAX_CUSTOM_DECK_SIZE, MIN_CUSTOM_DECK_SIZE, type SongCard } from "@/shared/protocol";
+import { selectWithinArtistLimit, shuffledCopy } from "@/shared/deck-rules";
+import { MAX_CUSTOM_DECK_SIZE, MAX_SONGS_PER_ARTIST, MIN_CUSTOM_DECK_SIZE, type SongCard } from "@/shared/protocol";
 
 interface ImportedTrack {
   title: string;
@@ -44,11 +45,12 @@ function toCard(track: ImportedTrack): SongCard | null {
   };
 }
 
-export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[]) => void }) {
+export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[], variedArtists: boolean) => void }) {
   const [session, setSession] = useState<{ enabled: boolean; connected: boolean; displayName?: string }>({ enabled: true, connected: false });
   const [playlist, setPlaylist] = useState("");
   const [deck, setDeck] = useState<SongCard[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
+  const [variedArtists, setVariedArtists] = useState(true);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -75,7 +77,7 @@ export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[]) => 
       });
       const body = await response.json() as { name?: string; tracks?: ImportedTrack[]; error?: string };
       if (!response.ok || !body.tracks) throw new Error(body.error ?? "Não foi possível importar a playlist.");
-      const candidates = body.tracks.flatMap((track) => {
+      const candidates = shuffledCopy(body.tracks).flatMap((track) => {
         const card = toCard(track);
         return card ? [card] : [];
       });
@@ -85,14 +87,23 @@ export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[]) => 
         known.add(card.id);
         return true;
       });
-      const accepted = unique.slice(0, Math.max(0, MAX_CUSTOM_DECK_SIZE - deck.length));
+      const artistSelection = variedArtists
+        ? selectWithinArtistLimit(unique, deck)
+        : { accepted: unique, rejected: 0 };
+      const accepted = artistSelection.accepted.slice(0, Math.max(0, MAX_CUSTOM_DECK_SIZE - deck.length));
       const next = [...deck, ...accepted];
       setDeck(next);
-      onChange(next);
+      onChange(next, variedArtists);
       setSources((current) => [...current, { name: body.name ?? "Playlist", imported: body.tracks!.length, added: accepted.length }]);
       setPlaylist("");
-      const capped = unique.length - accepted.length;
-      setMessage(`${accepted.length} músicas adicionadas; ${body.tracks.length - candidates.length} sem ano, ${candidates.length - unique.length} duplicadas${capped ? ` e ${capped} acima do limite de ${MAX_CUSTOM_DECK_SIZE}` : ""} foram ignoradas.`);
+      const capped = artistSelection.accepted.length - accepted.length;
+      const ignored = [
+        `${body.tracks.length - candidates.length} sem ano`,
+        `${candidates.length - unique.length} duplicadas`,
+        ...(variedArtists ? [`${artistSelection.rejected} acima do limite de ${MAX_SONGS_PER_ARTIST} por artista`] : []),
+        ...(capped ? [`${capped} acima do limite de ${MAX_CUSTOM_DECK_SIZE}`] : []),
+      ];
+      setMessage(`${accepted.length} músicas adicionadas em ordem aleatória; ${ignored.join(", ")} foram ignoradas.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao importar playlist.");
     } finally {
@@ -104,7 +115,22 @@ export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[]) => 
     setDeck([]);
     setSources([]);
     setMessage("");
-    onChange([]);
+    onChange([], variedArtists);
+  }
+
+  function toggleVariedArtists(enabled: boolean) {
+    setVariedArtists(enabled);
+    if (!enabled) {
+      setMessage("Limite por artista desativado; as próximas playlists continuam sendo embaralhadas.");
+      onChange(deck, false);
+      return;
+    }
+    const selection = selectWithinArtistLimit(shuffledCopy(deck));
+    setDeck(selection.accepted);
+    onChange(selection.accepted, true);
+    setMessage(selection.rejected
+      ? `${selection.rejected} músicas foram removidas para manter no máximo ${MAX_SONGS_PER_ARTIST} por artista.`
+      : `O deck já respeita o máximo de ${MAX_SONGS_PER_ARTIST} músicas por artista.`);
   }
 
   return (
@@ -113,6 +139,11 @@ export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[]) => 
         <div><strong>Baralho do host</strong><small>{summary}</small></div>
         {deck.length > 0 && <button type="button" className="text-button" onClick={clear}>Usar baralho base</button>}
       </div>
+
+      <label className="check-row">
+        <input type="checkbox" checked={variedArtists} onChange={(event) => toggleVariedArtists(event.target.checked)} />
+        <span><strong>Artistas mais variados</strong><small>Limita o mesmo artista a {MAX_SONGS_PER_ARTIST} músicas nesta sala.</small></span>
+      </label>
 
       {session.connected ? (
         <small className="spotify-account">Spotify: {session.displayName ?? "conta conectada"}</small>
@@ -129,6 +160,7 @@ export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[]) => 
       {sources.length > 0 && <div className="source-list">{sources.map((source, index) => <span key={`${source.name}-${index}`}>{source.name} · +{source.added} de {source.imported}</span>)}</div>}
       {message && <small className="deck-message">{message}</small>}
       {!valid && <small className="warning">Adicione pelo menos {MIN_CUSTOM_DECK_SIZE} músicas ou limpe para usar o baralho base.</small>}
+      <small className="muted">A seleção de cada playlist é sempre embaralhada.</small>
     </div>
   );
 }

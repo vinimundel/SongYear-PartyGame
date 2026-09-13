@@ -9,6 +9,7 @@ import {
 } from "@/shared/game-engine";
 import type { GameMode, SongCard } from "@/shared/protocol";
 import { validCustomDeck } from "@/shared/deck";
+import { selectWithinArtistLimit, shuffledCopy } from "@/shared/deck-rules";
 
 const cards = new Map<string, SongCard>(
   Array.from({ length: 14 }, (_, index) => {
@@ -56,6 +57,23 @@ describe("baralho do host", () => {
     expect(validCustomDeck([...custom, { ...custom[0] }], 3, 10)).toBe(false);
     expect(validCustomDeck(custom.map((card, index) => index ? card : { ...card, links: { spotify: "javascript:alert(1)" } }), 3, 10)).toBe(false);
     expect(validCustomDeck(custom.map((card, index) => index ? card : { ...card, id: "" }), 3, 10)).toBe(false);
+  });
+
+  it("embaralha a seleção e limita cada artista a três músicas", () => {
+    expect(shuffledCopy([1, 2, 3], () => 0)).toEqual([2, 3, 1]);
+    const sameArtist = [...cards.values()].slice(0, 5).map((card, index) => ({
+      ...card,
+      artists: [index % 2 ? "Ártista " : "artista"],
+    }));
+    const selection = selectWithinArtistLimit(sameArtist);
+    expect(selection.accepted).toHaveLength(3);
+    expect(selection.rejected).toBe(2);
+    expect(selectWithinArtistLimit(sameArtist.slice(2), sameArtist.slice(0, 2))).toMatchObject({
+      accepted: [sameArtist[2]],
+      rejected: 2,
+    });
+    expect(validCustomDeck(sameArtist.slice(0, 4), 4, 10)).toBe(true);
+    expect(validCustomDeck(sameArtist.slice(0, 4), 4, 10, 3)).toBe(false);
   });
 
   it("inicia a partida usando somente as cartas escolhidas pelo host", () => {

@@ -6,6 +6,7 @@ export const STARTING_TOKENS = 2;
 export const WINNING_CARD_COUNT = 10;
 export const MIN_CUSTOM_DECK_SIZE = 20;
 export const MAX_CUSTOM_DECK_SIZE = 500;
+export const MAX_SONGS_PER_ARTIST = 3;
 export const CHALLENGE_WINDOW_MS = 10_000;
 export const ROOM_IDLE_TIMEOUT_MS = 3 * 60 * 60 * 1000;
 

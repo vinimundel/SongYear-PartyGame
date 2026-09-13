@@ -16,6 +16,7 @@ export default function HomePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [hostDeck, setHostDeck] = useState<SongCard[]>([]);
+  const [variedArtists, setVariedArtists] = useState(true);
 
   async function createRoom(event: FormEvent) {
     event.preventDefault();
@@ -25,11 +26,13 @@ export default function HomePage() {
       const response = await fetch(`${gameHttpBase()}/rooms`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ hostName, mode, ...(hostDeck.length ? { deck: hostDeck } : {}) }),
+        body: JSON.stringify({ hostName, mode, variedArtists, ...(hostDeck.length ? { deck: hostDeck } : {}) }),
       });
       const body = (await response.json()) as { code?: string; identity?: ClientIdentity; error?: string };
       if (!response.ok || !body.code || !body.identity) {
-        throw new Error(body.error === "custom_deck_invalid" ? "O baralho personalizado precisa ter entre 20 e 500 músicas válidas." : body.error || "Não foi possível criar a sala.");
+        throw new Error(body.error === "custom_deck_invalid"
+          ? `O baralho personalizado precisa ter entre 20 e 500 músicas válidas${variedArtists ? " e no máximo 3 por artista" : ""}.`
+          : body.error || "Não foi possível criar a sala.");
       }
       saveIdentity(body.code, body.identity);
       router.push(`/room/${body.code}`);
@@ -83,7 +86,7 @@ export default function HomePage() {
               </label>
             ))}
           </fieldset>
-          <HostDeckBuilder onChange={setHostDeck} />
+          <HostDeckBuilder onChange={(deck, varied) => { setHostDeck(deck); setVariedArtists(varied); }} />
           <button className="primary" disabled={busy || (hostDeck.length > 0 && hostDeck.length < MIN_CUSTOM_DECK_SIZE)}>{busy ? "Criando…" : "Criar partida"}</button>
         </form>
 

@@ -25,7 +25,7 @@ celulares + TV ── WebSocket ──> Worker + Durable Object
                             └── Deezer API (fallback)
 ```
 
-O host pode conectar o Spotify na tela inicial e acumular quantas playlists quiser no baralho da sala, com remoção automática de faixas duplicadas e limite de 500 músicas válidas. Convidados não montam nem alteram o deck. Sem playlists próprias, a partida usa [`data/deck.json`](data/deck.json). O Deck Studio continua disponível para preparar e revisar esse baralho-base offline com ajuda do Genius. O Spotify fornece somente os metadados nessa preparação; a reprodução continua usando as prévias configuradas pelo projeto.
+O host pode conectar o Spotify na tela inicial e acumular quantas playlists quiser no baralho da sala. A seleção de cada playlist é embaralhada antes da inclusão, remove duplicadas e limita o deck a 500 músicas válidas. A opção **Artistas mais variados**, marcada por padrão, aceita no máximo 3 músicas por artista na sessão; o host pode desmarcá-la. Convidados não montam nem alteram o deck. Sem playlists próprias, a partida usa [`data/deck.json`](data/deck.json). O Deck Studio continua disponível para preparar e revisar esse baralho-base offline com ajuda do Genius. O Spotify fornece somente os metadados nessa preparação; a reprodução continua usando as prévias configuradas pelo projeto.
 
 ## Rodar localmente
 

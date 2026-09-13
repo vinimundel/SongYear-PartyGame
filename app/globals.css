@@ -112,6 +112,9 @@ legend { margin-bottom: 10px; color: var(--muted); font-size: .85rem; font-weigh
 .host-deck-builder .inline-form button { min-width: 92px; }
 .host-deck-builder > .link-button { width: 100%; }
 .host-deck-builder .warning { margin: 0; text-align: left; }
+.host-deck-builder .check-row { gap: 10px; margin: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer; }
+.host-deck-builder .check-row span { display: grid; gap: 2px; }
+.host-deck-builder .check-row small { color: var(--muted); }
 
 .primary, .secondary, .danger, .text-button, .link-button {
   display: inline-flex;

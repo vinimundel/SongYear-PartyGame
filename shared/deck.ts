@@ -1,4 +1,5 @@
 import rawDeck from "../data/deck.json";
+import { respectsArtistLimit } from "./deck-rules";
 import type { SongCard } from "./protocol";
 
 export function isSongCard(value: unknown): value is SongCard {
@@ -21,7 +22,7 @@ export function isSongCard(value: unknown): value is SongCard {
       Array.isArray(card.artists) &&
       card.artists.length > 0 &&
       card.artists.length <= 12 &&
-      card.artists.every((artist) => typeof artist === "string" && artist.length > 0 && artist.length <= 120) &&
+      card.artists.every((artist) => typeof artist === "string" && artist.trim().length > 0 && artist.length <= 120) &&
       Number.isInteger(card.year) &&
       card.year! >= 1800 &&
       card.year! <= 2200 &&
@@ -35,10 +36,12 @@ export function isSongCard(value: unknown): value is SongCard {
   );
 }
 
-export function validCustomDeck(value: unknown, minimum = 20, maximum = 500): value is SongCard[] {
+export function validCustomDeck(value: unknown, minimum = 20, maximum = 500, maximumPerArtist?: number): value is SongCard[] {
   if (!Array.isArray(value) || value.length < minimum || value.length > maximum || !value.every(isSongCard)) return false;
   const ids = new Set(value.map((card) => card.id));
-  return ids.size === value.length && value.every((card) =>
+  return ids.size === value.length &&
+    (maximumPerArtist === undefined || respectsArtistLimit(value, maximumPerArtist)) &&
+    value.every((card) =>
     Object.values(card.links).every((link) => link === undefined || link.startsWith("https://"))
   );
 }
