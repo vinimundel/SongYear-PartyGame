@@ -9,7 +9,10 @@ import {
 } from "@/lib/spotify-dev";
 
 function callbackDestination(request: NextRequest, returnTo: string, spotify: "conectado" | "erro"): URL {
-  const destination = new URL(returnTo, request.url);
+  // Atrás de um Quick Tunnel, request.url pode conter o host interno 0.0.0.0.
+  // O redirect URI configurado é a origem pública canônica do fluxo OAuth.
+  const publicBase = process.env.SPOTIFY_REDIRECT_URI?.trim() || request.url;
+  const destination = new URL(returnTo, publicBase);
   destination.searchParams.set("spotify", spotify);
   return destination;
 }
