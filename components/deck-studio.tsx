@@ -14,6 +14,24 @@ interface DraftTrack {
   geniusUrl?: string;
   reviewed: boolean;
   status?: string;
+  source?: string;
+}
+
+function fingerprint(track: Pick<DraftTrack, "title" | "artist" | "spotifyUrl">): string {
+  const spotifyId = track.spotifyUrl?.match(/track\/([A-Za-z0-9]+)/)?.[1];
+  if (spotifyId) return `spotify:${spotifyId}`;
+  return `${track.artist}::${track.title}`.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+}
+
+function appendUnique(current: DraftTrack[], incoming: DraftTrack[]): { tracks: DraftTrack[]; added: number } {
+  const known = new Set(current.map(fingerprint));
+  const unique = incoming.filter((track) => {
+    const key = fingerprint(track);
+    if (known.has(key)) return false;
+    known.add(key);
+    return true;
+  });
+  return { tracks: [...current, ...unique], added: unique.length };
 }
 
 function splitCsvLine(line: string, separator: string): string[] {
@@ -89,6 +107,7 @@ export function DeckStudio() {
   const [csv, setCsv] = useState("title,artist,year,spotifyUrl\n");
   const [playlist, setPlaylist] = useState("");
   const [spotify, setSpotify] = useState<{ connected: boolean; displayName?: string } | null>(null);
+  const [sources, setSources] = useState<Array<{ name: string; count: number }>>([]);
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -108,8 +127,12 @@ export function DeckStudio() {
     const body = await response.json() as { name?: string; tracks?: Array<{ title: string; artists: string[]; year: number | null; durationMs?: number; spotifyUrl?: string }>; error?: string };
     if (!response.ok || !body.tracks) setMessage(body.error ?? "Falha ao importar playlist.");
     else {
-      setTracks(body.tracks.map((track) => ({ key: crypto.randomUUID(), title: track.title, artist: track.artists.join("; "), year: track.year?.toString() ?? "", durationMs: track.durationMs, spotifyUrl: track.spotifyUrl, reviewed: false, status: "Spotify" })));
-      setMessage(`${body.tracks.length} faixas importadas de “${body.name}”. Agora revise os anos.`);
+      const source = body.name ?? "Playlist Spotify";
+      const incoming = body.tracks.map((track) => ({ key: crypto.randomUUID(), title: track.title, artist: track.artists.join("; "), year: track.year?.toString() ?? "", durationMs: track.durationMs, spotifyUrl: track.spotifyUrl, reviewed: false, status: `Spotify · ${source}`, source }));
+      const merged = appendUnique(tracks, incoming);
+      setTracks(merged.tracks);
+      setSources((current) => [...current, { name: source, count: incoming.length }]);
+      setMessage(`${merged.added} novas faixas adicionadas de “${source}” (${incoming.length - merged.added} duplicadas ignoradas). Você pode importar outra playlist agora.`);
     }
     setBusy("");
   }
@@ -163,16 +186,23 @@ export function DeckStudio() {
 
       <section className="studio-imports">
         <div className="panel">
+          <p className="eyebrow">ÁREA DO HOST</p>
           <h2>Spotify</h2>
           {spotify?.connected ? <p>Conectado como <strong>{spotify.displayName ?? "conta Spotify"}</strong>.</p> : <a className="primary link-button" href="/api/dev/spotify/login">Conectar Spotify</a>}
           <label>Link ou ID da sua playlist<input value={playlist} onChange={(event) => setPlaylist(event.target.value)} placeholder="https://open.spotify.com/playlist/…" /></label>
           <button className="secondary" disabled={!spotify?.connected || !playlist || Boolean(busy)} onClick={importPlaylist}>{busy === "spotify" ? "Importando…" : "Importar playlist"}</button>
+          {sources.length > 0 && <div className="source-list">{sources.map((source, index) => <span key={`${source.name}-${index}`}>{source.name} · {source.count}</span>)}</div>}
         </div>
         <div className="panel">
           <h2>CSV</h2>
           <p className="muted">Colunas: title, artist, year e spotifyUrl. Vírgula ou ponto e vírgula.</p>
           <textarea rows={6} value={csv} onChange={(event) => setCsv(event.target.value)} />
-          <button className="secondary" onClick={() => { const parsed = csvTracks(csv); setTracks(parsed); setMessage(`${parsed.length} faixas lidas do CSV.`); }}>Ler CSV</button>
+          <button className="secondary" onClick={() => {
+            const parsed = csvTracks(csv).map((track) => ({ ...track, source: "CSV" }));
+            const merged = appendUnique(tracks, parsed);
+            setTracks(merged.tracks);
+            setMessage(`${merged.added} faixas do CSV adicionadas (${parsed.length - merged.added} duplicadas ignoradas).`);
+          }}>Adicionar CSV</button>
         </div>
       </section>
 
@@ -183,6 +213,7 @@ export function DeckStudio() {
             <div><strong>{tracks.length}</strong> faixas · <strong>{approved.length}</strong> aprovadas com ano</div>
             <button className="secondary" disabled={Boolean(busy)} onClick={consultAll}>{busy === "genius" ? "Consultando…" : "Sugerir anos com Genius"}</button>
             <button className="text-button" onClick={() => setTracks((current) => current.map((track) => ({ ...track, reviewed: /^\d{4}$/.test(track.year) })))}>Aprovar as que têm ano</button>
+            <button className="text-button" onClick={() => { setTracks([]); setSources([]); setMessage("Baralho limpo."); }}>Limpar baralho</button>
             <button className="primary link-button" disabled={approved.length < 40} onClick={download}>Baixar deck.json</button>
           </section>
           {approved.length < 40 && <p className="warning">O jogo exige pelo menos 40 cartas aprovadas. Faltam {40 - approved.length}.</p>}

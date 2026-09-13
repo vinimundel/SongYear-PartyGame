@@ -25,7 +25,7 @@ celulares + TV ── WebSocket ──> Worker + Durable Object
                             └── Deezer API (fallback)
 ```
 
-O Spotify e o Genius são usados apenas no Deck Studio. Uma partida normal lê o arquivo estático [`data/deck.json`](data/deck.json) e não depende dessas contas.
+O Spotify e o Genius são usados apenas no Deck Studio do host. Ele pode acumular quantas playlists quiser, com remoção automática de faixas duplicadas, antes de exportar o baralho. Convidados não montam nem alteram o deck. Uma partida normal lê o arquivo estático [`data/deck.json`](data/deck.json) e não depende dessas contas.
 
 ## Rodar localmente
 
@@ -46,6 +46,14 @@ npm run dev
 
 Abra `http://127.0.0.1:8000`. O frontend usa `ws://127.0.0.1:8787` como Worker local por padrão.
 
+Para expor temporariamente o Deck Studio ao callback do Spotify, mantenha o Next rodando e abra outro terminal:
+
+```bash
+npm run tunnel
+```
+
+Copie o endereço HTTPS mostrado pelo Cloudflare para `SPOTIFY_REDIRECT_URI`, acrescentando `/api/dev/spotify/callback`, e cadastre exatamente a mesma URI no Spotify Dashboard. Quick Tunnels mudam de endereço quando reiniciados e são indicados apenas para desenvolvimento.
+
 Para testar em celulares na mesma rede, exponha os dois processos em um endereço HTTPS/WSS acessível e ajuste:
 
 ```env
@@ -65,7 +73,7 @@ Abra `http://127.0.0.1:8000/dev/deck` em desenvolvimento.
    `http://127.0.0.1:8000/api/dev/spotify/callback`
 
 2. Preencha `SPOTIFY_CLIENT_ID`, `SPOTIFY_CLIENT_SECRET` e `SPOTIFY_REDIRECT_URI` em `.env.local`.
-3. Conecte sua conta no Deck Studio e informe uma playlist que essa conta possa acessar.
+3. Conecte sua conta no Deck Studio e adicione quantas playlists quiser que essa conta possa acessar. Cada importação é acumulada no baralho atual.
 
 ### Via CSV
 
