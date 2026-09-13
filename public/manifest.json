@@ -1,0 +1,9 @@
+{
+  "name": "SongYear",
+  "short_name": "SongYear",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111113",
+  "theme_color": "#d8ff3e",
+  "lang": "pt-BR"
+}

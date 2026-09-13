@@ -1,0 +1,10 @@
+node_modules/
+.next/
+.env
+.env.local
+coverage/
+*.tsbuildinfo
+worker/node_modules/
+worker/.wrangler/
+worker/.dev.vars
+songyear-deck.json
