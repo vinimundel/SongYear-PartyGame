@@ -48,6 +48,7 @@ function resultText(snapshot: RoomSnapshot): string {
 
 export function GameBoard({ snapshot }: { snapshot: RoomSnapshot }) {
   const active = snapshot.participants.find((player) => player.id === snapshot.activePlayerId);
+  const host = snapshot.participants.find((player) => player.isHost);
   const winner = snapshot.participants.find((player) => player.id === snapshot.winnerId);
   const challenger = snapshot.participants.find((player) => player.id === snapshot.challenge?.playerId);
 
@@ -55,7 +56,7 @@ export function GameBoard({ snapshot }: { snapshot: RoomSnapshot }) {
     <div className="game-board">
       <div className="round-banner">
         <div>
-          <span className="eyebrow">SALA {snapshot.code} · {snapshot.mode.toUpperCase()}</span>
+          <span className="eyebrow">SALA {snapshot.code} · {snapshot.mode.toUpperCase()} · DJ {host?.name ?? "HOST"}</span>
           <h1>
             {snapshot.phase === "lobby" && "Preparando a festa"}
             {(snapshot.phase === "listening" || snapshot.phase === "placing") && `Vez de ${active?.name ?? "—"}`}

@@ -322,7 +322,7 @@ export function applyGameAction(
     }
 
     case "round:play": {
-      if (!requireActive(room, actor)) return error("Apenas o jogador da vez pode tocar a música.");
+      if (!actor.isHost) return error("Somente o host, que é o DJ, pode tocar a música.");
       if ((room.phase !== "listening" && room.phase !== "placing") || !room.currentCardId) {
         return error("A música não pode ser tocada agora.");
       }

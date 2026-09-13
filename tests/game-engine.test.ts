@@ -71,6 +71,19 @@ describe("baralho do host", () => {
 });
 
 describe("rodada competitiva", () => {
+  it("mantém o host como DJ quando a vez é de um convidado", () => {
+    const room = createRoomState("DJAY", "Host", "host-secret", "p1", "p1-secret", "original", 1_000);
+    addParticipant(room, "Convidado", "p2", "p2-secret");
+    applyGameAction(room, { playerId: "p1", isHost: true }, { type: "host:start", actionId: "start-guest", firstPlayerId: "p2" }, cards, 2_000, () => 0.999);
+
+    const guestPlay = applyGameAction(room, { playerId: "p2", isHost: false }, { type: "round:play", actionId: "guest-play" }, cards, 3_000);
+    const hostPlay = applyGameAction(room, { playerId: "p1", isHost: true }, { type: "round:play", actionId: "host-play" }, cards, 3_100);
+
+    expect(room.participants[room.turnIndex].id).toBe("p2");
+    expect(guestPlay).toMatchObject({ ok: false, effects: [] });
+    expect(hostPlay).toMatchObject({ ok: true, effects: [{ type: "audio:play" }] });
+  });
+
   it("dá prioridade ao acerto do jogador ativo mesmo com contestação", () => {
     const room = setup();
     listen(room);

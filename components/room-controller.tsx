@@ -86,13 +86,16 @@ function ConnectedRoom({ code, name }: { code: string; name?: string }) {
   const statusLabel = useMemo(() => {
     if (!snapshot) return "Entrando na sala…";
     if (snapshot.phase === "lobby") return "Aguardando jogadores";
-    if (snapshot.phase === "listening") return isActive ? "Toque a música" : `Vez de ${active?.name}`;
+    if (snapshot.phase === "listening") {
+      if (you?.isHost) return `Toque a música para ${active?.name ?? "o jogador da vez"}`;
+      return isActive ? "Aguarde o DJ tocar a música" : `Vez de ${active?.name}`;
+    }
     if (snapshot.phase === "placing") return isActive ? "Escolha uma posição" : `${active?.name} está decidindo`;
     if (snapshot.phase === "challenge_open") return "Janela de contestação";
     if (snapshot.phase === "challenge_placing") return isChallenger ? "Escolha onde deveria estar" : "Desafio em andamento";
     if (snapshot.phase === "revealed") return "Carta revelada";
     return "Fim de jogo";
-  }, [active?.name, isActive, isChallenger, snapshot]);
+  }, [active?.name, isActive, isChallenger, snapshot, you?.isHost]);
 
   if (!snapshot || !you || !me) {
     return (
@@ -141,13 +144,13 @@ function ConnectedRoom({ code, name }: { code: string; name?: string }) {
       {snapshot.phase === "lobby" ? (
         <section className="lobby-layout">
           <div className="panel">
-            <p className="eyebrow">VOCÊ É {you.isHost ? "HOST E JOGADOR" : "JOGADOR"}</p>
+            <p className="eyebrow">VOCÊ É {you.isHost ? "HOST, DJ E JOGADOR" : "JOGADOR"}</p>
             <h1>{you.isHost ? "Monte a mesa" : "Você entrou!"}</h1>
             <div className="roster">
               {snapshot.participants.map((player) => (
                 <label className="roster-row" key={player.id}>
                   {you.isHost && <input type="radio" name="first" checked={firstPlayer === player.id} onChange={() => setFirstPlayer(player.id)} />}
-                  <span>{player.name}{player.isHost ? " · host" : ""}</span>
+                  <span>{player.name}{player.isHost ? " · host e DJ" : ""}</span>
                   <span className={player.connected ? "online-dot" : "offline-dot"} />
                 </label>
               ))}
@@ -210,10 +213,13 @@ function ConnectedRoom({ code, name }: { code: string; name?: string }) {
           {snapshot.phase !== "finished" && (
             <section className="panel action-panel">
               {(snapshot.phase === "listening" || snapshot.phase === "placing") && (
-                <div className="hidden-stage"><HiddenCard label="▶" /><p>{isActive ? "Você é o DJ desta rodada." : `${active?.name} está no comando.`}</p></div>
+                <div className="hidden-stage">
+                  <HiddenCard label="▶" />
+                  <p>{you.isHost ? `Você é o DJ · vez de ${active?.name}` : isActive ? "O host é o DJ · esta é sua rodada." : `O host é o DJ · vez de ${active?.name}`}</p>
+                </div>
               )}
 
-              {isActive && (snapshot.phase === "listening" || snapshot.phase === "placing") && (
+              {you.isHost && (snapshot.phase === "listening" || snapshot.phase === "placing") && (
                 <div className="action-stack">
                   <button className="primary play-button" onClick={() => send({ type: "round:play" })}>
                     {snapshot.phase === "placing" ? "↻ Repetir trecho" : "▶ Tocar 30 segundos"}

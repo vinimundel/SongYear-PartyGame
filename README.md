@@ -91,7 +91,7 @@ Em produção, o Deck Studio fica desativado. Para habilitá-lo explicitamente, 
 ## Regras implementadas
 
 - Todos começam com 2 fichas e uma carta aberta.
-- O jogador da vez também é o DJ e pode repetir a prévia sem custo.
+- O host é o DJ fixo da partida e controla o início e a repetição das prévias; a vez de posicionar continua rodando entre os jogadores.
 - Depois da posição ser confirmada, adversários têm 10 segundos para contestar; o primeiro clique válido leva a disputa e recebe mais 10 segundos para posicionar.
 - A contestação custa 1 ficha. Se o desafiante roubar a carta, recupera a aposta e ganha mais 1 ficha.
 - O acerto do jogador ativo sempre tem prioridade sobre o desafiante.
