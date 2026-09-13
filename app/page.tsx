@@ -3,8 +3,9 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { HostDeckBuilder } from "@/components/host-deck-builder";
+import { readJsonResponse } from "@/lib/http-response";
 import { gameHttpBase, saveIdentity, savePendingName } from "@/lib/room-storage";
-import { MIN_CUSTOM_DECK_SIZE, type ClientIdentity, type GameMode, type SongCard } from "@/shared/protocol";
+import { MAX_CUSTOM_DECK_SIZE, MAX_SONGS_PER_ARTIST, MIN_CUSTOM_DECK_SIZE, type ClientIdentity, type GameMode, type SongCard } from "@/shared/protocol";
 
 export default function HomePage() {
   const router = useRouter();
@@ -28,10 +29,13 @@ export default function HomePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hostName, mode, variedArtists, ...(hostDeck.length ? { deck: hostDeck } : {}) }),
       });
-      const body = (await response.json()) as { code?: string; identity?: ClientIdentity; error?: string };
+      const body = await readJsonResponse<{ code?: string; identity?: ClientIdentity; error?: string }>(
+        response,
+        "O servidor do jogo não respondeu corretamente; confira se npm run worker:dev está rodando",
+      );
       if (!response.ok || !body.code || !body.identity) {
         throw new Error(body.error === "custom_deck_invalid"
-          ? `O baralho personalizado precisa ter entre 20 e 500 músicas válidas${variedArtists ? " e no máximo 3 por artista" : ""}.`
+          ? `O baralho personalizado precisa ter entre ${MIN_CUSTOM_DECK_SIZE} e ${MAX_CUSTOM_DECK_SIZE} músicas válidas${variedArtists ? ` e no máximo ${MAX_SONGS_PER_ARTIST} por artista` : ""}.`
           : body.error || "Não foi possível criar a sala.");
       }
       saveIdentity(body.code, body.identity);

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { readJsonResponse } from "@/lib/http-response";
 import type { SongCard } from "@/shared/protocol";
 
 interface DraftTrack {
@@ -123,18 +124,26 @@ export function DeckStudio() {
 
   async function importPlaylist() {
     setBusy("spotify"); setMessage("");
-    const response = await fetch("/api/spotify/playlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playlist }) });
-    const body = await response.json() as { name?: string; tracks?: Array<{ title: string; artists: string[]; year: number | null; durationMs?: number; spotifyUrl?: string }>; error?: string };
-    if (!response.ok || !body.tracks) setMessage(body.error ?? "Falha ao importar playlist.");
-    else {
-      const source = body.name ?? "Playlist Spotify";
-      const incoming = body.tracks.map((track) => ({ key: crypto.randomUUID(), title: track.title, artist: track.artists.join("; "), year: track.year?.toString() ?? "", durationMs: track.durationMs, spotifyUrl: track.spotifyUrl, reviewed: false, status: `Spotify · ${source}`, source }));
-      const merged = appendUnique(tracks, incoming);
-      setTracks(merged.tracks);
-      setSources((current) => [...current, { name: source, count: incoming.length }]);
-      setMessage(`${merged.added} novas faixas adicionadas de “${source}” (${incoming.length - merged.added} duplicadas ignoradas). Você pode importar outra playlist agora.`);
+    try {
+      const response = await fetch("/api/spotify/playlist", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ playlist }) });
+      const body = await readJsonResponse<{ name?: string; tracks?: Array<{ title: string; artists: string[]; year: number | null; durationMs?: number; spotifyUrl?: string }>; error?: string }>(
+        response,
+        "O servidor do Spotify não respondeu corretamente; confira o terminal do npm run dev",
+      );
+      if (!response.ok || !body.tracks) setMessage(body.error ?? "Falha ao importar playlist.");
+      else {
+        const source = body.name ?? "Playlist Spotify";
+        const incoming = body.tracks.map((track) => ({ key: crypto.randomUUID(), title: track.title, artist: track.artists.join("; "), year: track.year?.toString() ?? "", durationMs: track.durationMs, spotifyUrl: track.spotifyUrl, reviewed: false, status: `Spotify · ${source}`, source }));
+        const merged = appendUnique(tracks, incoming);
+        setTracks(merged.tracks);
+        setSources((current) => [...current, { name: source, count: incoming.length }]);
+        setMessage(`${merged.added} novas faixas adicionadas de “${source}” (${incoming.length - merged.added} duplicadas ignoradas). Você pode importar outra playlist agora.`);
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao importar playlist.");
+    } finally {
+      setBusy("");
     }
-    setBusy("");
   }
 
   async function consultGenius(track: DraftTrack) {

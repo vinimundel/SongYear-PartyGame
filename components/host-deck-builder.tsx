@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { readJsonResponse } from "@/lib/http-response";
 import { selectWithinArtistLimit, shuffledCopy } from "@/shared/deck-rules";
 import { MAX_CUSTOM_DECK_SIZE, MAX_SONGS_PER_ARTIST, MIN_CUSTOM_DECK_SIZE, type SongCard } from "@/shared/protocol";
 
@@ -75,7 +76,10 @@ export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[], var
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ playlist }),
       });
-      const body = await response.json() as { name?: string; tracks?: ImportedTrack[]; error?: string };
+      const body = await readJsonResponse<{ name?: string; tracks?: ImportedTrack[]; error?: string }>(
+        response,
+        "O servidor do Spotify não respondeu corretamente; confira o terminal do npm run dev",
+      );
       if (!response.ok || !body.tracks) throw new Error(body.error ?? "Não foi possível importar a playlist.");
       const candidates = shuffledCopy(body.tracks).flatMap((track) => {
         const card = toCard(track);

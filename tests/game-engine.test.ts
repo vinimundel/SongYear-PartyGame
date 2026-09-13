@@ -65,10 +65,10 @@ describe("baralho do host", () => {
       ...card,
       artists: [index % 2 ? "Ártista " : "artista"],
     }));
-    const selection = selectWithinArtistLimit(sameArtist);
+    const selection = selectWithinArtistLimit(sameArtist, [], 3);
     expect(selection.accepted).toHaveLength(3);
     expect(selection.rejected).toBe(2);
-    expect(selectWithinArtistLimit(sameArtist.slice(2), sameArtist.slice(0, 2))).toMatchObject({
+    expect(selectWithinArtistLimit(sameArtist.slice(2), sameArtist.slice(0, 2), 3)).toMatchObject({
       accepted: [sameArtist[2]],
       rejected: 2,
     });
