@@ -45,7 +45,7 @@ function toCard(track: ImportedTrack): SongCard | null {
 }
 
 export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[]) => void }) {
-  const [session, setSession] = useState<{ enabled: boolean; connected: boolean; displayName?: string } | null>(null);
+  const [session, setSession] = useState<{ enabled: boolean; connected: boolean; displayName?: string }>({ enabled: true, connected: false });
   const [playlist, setPlaylist] = useState("");
   const [deck, setDeck] = useState<SongCard[]>([]);
   const [sources, setSources] = useState<Source[]>([]);
@@ -114,19 +114,17 @@ export function HostDeckBuilder({ onChange }: { onChange: (deck: SongCard[]) => 
         {deck.length > 0 && <button type="button" className="text-button" onClick={clear}>Usar baralho base</button>}
       </div>
 
-      {session?.connected ? (
-        <>
-          <small className="spotify-account">Spotify: {session.displayName ?? "conta conectada"}</small>
-          <div className="inline-form">
-            <input aria-label="Link da playlist" value={playlist} onChange={(event) => setPlaylist(event.target.value)} placeholder="Cole uma playlist do Spotify" />
-            <button type="button" className="secondary" disabled={busy || !playlist.trim() || deck.length >= MAX_CUSTOM_DECK_SIZE} onClick={addPlaylist}>{busy ? "…" : "Adicionar"}</button>
-          </div>
-        </>
-      ) : session?.enabled ? (
-        <a className="secondary link-button" href="/api/spotify/login?returnTo=/">Conectar Spotify para adicionar playlists</a>
+      {session.connected ? (
+        <small className="spotify-account">Spotify: {session.displayName ?? "conta conectada"}</small>
       ) : (
-        <small className="muted">Configure o Spotify para usar playlists próprias.</small>
+        <a className="secondary link-button" href="/api/spotify/login?returnTo=/">Conectar Spotify para adicionar playlists</a>
       )}
+
+      <div className="inline-form">
+        <input aria-label="Link da playlist" value={playlist} onChange={(event) => setPlaylist(event.target.value)} placeholder="Cole uma playlist do Spotify" />
+        <button type="button" className="secondary" disabled={busy || !playlist.trim() || deck.length >= MAX_CUSTOM_DECK_SIZE} onClick={addPlaylist}>{busy ? "…" : "Adicionar"}</button>
+      </div>
+      {!session.enabled && <small className="muted">A configuração do Spotify não pôde ser confirmada; tente conectar novamente.</small>}
 
       {sources.length > 0 && <div className="source-list">{sources.map((source, index) => <span key={`${source.name}-${index}`}>{source.name} · +{source.added} de {source.imported}</span>)}</div>}
       {message && <small className="deck-message">{message}</small>}
